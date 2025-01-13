@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@playwright/test": "^1.49.1",
     "@react-three/drei": "^9.120.1",
     "@react-three/fiber": "^8.17.10",
     "cra-template": "1.2.0",
+    "playwright": "^1.49.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.1.1",
     "react-scripts": "5.0.1",
     "three": "^0.171.0"
   },

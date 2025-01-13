@@ -1,4 +1,5 @@
 import { useGLTF, useTexture, useAnimations } from '@react-three/drei';
+import {LoginForm} from '/components/LoginForm.js'
 import React, { useEffect, useRef, useState } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -162,7 +163,7 @@ import * as THREE from 'three';
     };
     return (
       <>
-      <div style={listStyles.container}>
+      <div style={listStyles.container} id="planet-list">
         {planets.map((planet, index) => (
           <div
             key={index}
@@ -175,10 +176,10 @@ import * as THREE from 'three';
       </div>
 
       {selectedPlanet && (
-        <div style={popupStyles.overlay} onClick={closePopup}>
+        <div style={popupStyles.overlay} onClick={closePopup} id='planet-popup'>
           <div style={popupStyles.content} onClick={(e) => e.stopPropagation()}>
             <h2>{selectedPlanet.name}</h2>
-            <table style={popupStyles.table}>
+            <table style={popupStyles.table} id='planet-attribue-table'>
               <tbody>
                 {/* Manually define rows */}
                 <TableRow label="Density" value={selectedPlanet.planet.density} />
@@ -267,17 +268,15 @@ import * as THREE from 'three';
     );
   };
 
-  const Model = ({ modelPath, speed = 5, scale = 0.01, horizonId = 399, rotationSpeed = 0.01 }) => {
+  const Model = ({ modelPath, speed = 1, scale = 0.01, horizonId = 399, rotationSpeed = 0.01 }) => {
     const gltf = useLoader(GLTFLoader, modelPath);
     const sizeScalar = 1;
     const objectRef = useRef(); 
     const dataLength = useRef();
     const planetData = useRef()
-    const nextIndex = useRef(1);
-
-  
-    const currentPosition = useRef(new THREE.Vector3(0, 0, 0));
-    const targetPosition = useRef(new THREE.Vector3(0, 0, 0));
+    const currentIndex = useRef(0);
+    const accumulatedTime = useRef(0);
+    const currentVelocity  = useRef(new THREE.Vector3(0, 0, 0));
     const dataIsFetched = useRef(false)
 
     useEffect(() => {
@@ -294,15 +293,9 @@ import * as THREE from 'three';
             planetData.current.ephemeris[0].scaledPositionY * sizeScalar,
             planetData.current.ephemeris[0].scaledPositionZ * sizeScalar
           );
-          targetPosition.current.set(
-            planetData.current.ephemeris[1].scaledPositionX * sizeScalar,
-            planetData.current.ephemeris[1].scaledPositionY * sizeScalar,
-            planetData.current.ephemeris[1].scaledPositionZ * sizeScalar
-          );
 
           dataIsFetched.current = true
-          console.log(targetPosition.current)
-
+        
         } catch (error) {
           console.error("Error fetching data:", error);
         }
@@ -314,49 +307,36 @@ import * as THREE from 'three';
 
     useFrame((_, delta) => {
       if (!dataIsFetched.current) return;
-  
-      const currentPosition = objectRef.current.position.clone();
-      const direction = new THREE.Vector3()
-          .subVectors(targetPosition.current, currentPosition)
-          .normalize();
-  
-      const remainingDistance = currentPosition.distanceTo(targetPosition.current);
-      const stepDistance = Math.min(speed * delta, remainingDistance);
-  
-      currentPosition.add(direction.multiplyScalar(stepDistance));
-  
-      if (remainingDistance <= stepDistance) {
-          nextIndex.current = nextIndex.current + 1;
 
-          if (nextIndex.current >= dataLength.current) 
-            {
-              nextIndex.current = 1;
-              objectRef.current.position.set(
-                planetData.current.ephemeris[0].scaledPositionX * sizeScalar,
-                planetData.current.ephemeris[0].scaledPositionY * sizeScalar,
-                planetData.current.ephemeris[0].scaledPositionZ * sizeScalar
-              );
+      accumulatedTime.current += delta * speed;
+      objectRef.current.rotation.y += rotationSpeed;
 
-              targetPosition.current.set(
-                planetData.current.ephemeris[nextIndex.current].scaledPositionX * sizeScalar,
-                planetData.current.ephemeris[nextIndex.current].scaledPositionY * sizeScalar,
-                planetData.current.ephemeris[nextIndex.current].scaledPositionZ * sizeScalar
+      
+
+      if (accumulatedTime.current >= 1) {
+        currentIndex.current = currentIndex.current + 1;
+        accumulatedTime.current = 0;
+
+        if (currentIndex.current >= dataLength.current) 
+          {
+            currentIndex.current = 0;
+            objectRef.current.position.set(
+              planetData.current.ephemeris[0].scaledPositionX * sizeScalar,
+              planetData.current.ephemeris[0].scaledPositionY * sizeScalar,
+              planetData.current.ephemeris[0].scaledPositionZ * sizeScalar
             );
 
-            }
-          objectRef.current.position.copy(targetPosition.current);
-          console.log("updating position")
-  
-          targetPosition.current.set(
-              planetData.current.ephemeris[nextIndex.current].scaledPositionX * sizeScalar,
-              planetData.current.ephemeris[nextIndex.current].scaledPositionY * sizeScalar,
-              planetData.current.ephemeris[nextIndex.current].scaledPositionZ * sizeScalar
-          );
-  
-      } else {
-          objectRef.current.position.copy(currentPosition);
-          objectRef.current.rotation.y += rotationSpeed;
-      }
+
+          } else {
+            objectRef.current.position.set(
+              planetData.current.ephemeris[currentIndex.current].scaledPositionX * sizeScalar,
+              planetData.current.ephemeris[currentIndex.current].scaledPositionY * sizeScalar,
+              planetData.current.ephemeris[currentIndex.current].scaledPositionZ * sizeScalar
+            );
+
+          }
+        
+      } 
   });
   
     return (
@@ -386,7 +366,7 @@ import * as THREE from 'three';
 
 
 function App() {
-  const [sliderValue, setSliderValue] = useState(5);
+  const [sliderValue, setSliderValue] = useState(1);
   const [mercury, setMercury] = useState(null);
   const [venus, setVenus] = useState(null);
   const [earth, setEarth] = useState(null)
@@ -420,10 +400,6 @@ function App() {
     fetchData();
   },  []);
 
-  
-
-
-
   const handleSliderChange = (event) => {
     setSliderValue(event.target.value);
   };
@@ -442,14 +418,14 @@ function App() {
           height: '100%',
         }}
       >
-        <perspectiveCamera makeDefault position={[100, 100, 100]} />
+        <perspectiveCamera makeDefault position={[150, 150, 150]} />
         <Skybox />
 
         <OrbitControls
           enableDamping
           dampingFactor={0.1}
           rotateSpeed={0.7}
-          minDistance={20}
+          minDistance={35}
           maxDistance={500}
         />
     
