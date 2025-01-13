@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const loginFormStyles = {
   container: {
@@ -35,8 +36,8 @@ const loginFormStyles = {
     margin: '20px 0',
     borderRadius: '5px',
     border: 'none',
-    backgroundColor: '#0fefef',
-    color: '#000',
+    backgroundColor: '#ffffff',  
+    color: '#000000',  
     fontSize: '1rem',
     fontWeight: 'bold',
     cursor: 'pointer',
@@ -44,32 +45,83 @@ const loginFormStyles = {
     boxShadow: '0 0 5px #ffffff, 0 0 10px #ffffff',
   },
   buttonHover: {
-    backgroundColor: '#0bc0c0',
+    backgroundColor: '#f1f1f1',  
     boxShadow: '0 0 20px #ffffff, 0 0 40px #ffffff',
   },
   link: {
-    color: '#0fefef',
+    color: '#ffffff',
     textDecoration: 'none',
     fontSize: '0.9rem',
     textShadow: '0 0 5px #ffffff',
   },
 };
 
-const LoginForm = () => {
+
+const LoginForm = ({setAuthenticated}) => {
   const [hover, setHover] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
+
+  // Event handler for form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevent the default form submission behavior
+
+    const data = { username, password };
+
+    try {
+      const response = await fetch('http://localhost:5259/mysql/api/user/authenticate-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        console.log('User authenticated');
+        setAuthenticated(true)
+        navigate('/');
+      } else {
+   
+        console.log('Authentication failed');
+        setAuthenticated(false)
+      }
+    } catch (error) {
+      console.error('Error during authentication:', error);
+    }
+  };
 
   return (
     <div style={loginFormStyles.container}>
       <h1 style={loginFormStyles.title}>Login</h1>
-      <input type="text" placeholder="Username" style={loginFormStyles.input} />
-      <input type="password" placeholder="Password" style={loginFormStyles.input} />
-      <button
-        style={hover ? { ...loginFormStyles.button, ...loginFormStyles.buttonHover } : loginFormStyles.button}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        Login
-      </button>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="Username"
+          id='username-input'
+          style={loginFormStyles.input}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          id='password-input'
+          style={loginFormStyles.input}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button
+          type="submit"
+          id='submit-login'
+          style={hover ? { ...loginFormStyles.button, ...loginFormStyles.buttonHover } : loginFormStyles.button}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+        >
+          Login
+        </button>
+      </form>
       <a href="#" style={loginFormStyles.link}>
         Forgot your password?
       </a>
